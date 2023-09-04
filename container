@@ -54,7 +54,6 @@ function fetch_lovelace_plugins() {
 }
 
 function install_lovelace_plugins() {
-
     for file in $LOVELACE_LOCAL_FILES
     do
         plugins="${plugins} /local/workspace/${file}"
@@ -100,39 +99,61 @@ function install_hacs() {
     curl -sfSL https://hacs.xyz/install | bash -
 }
 
+function install_ha_dev() {
+
+    local VERSION=${HA_VERSION:-dev}
+    echo "Installing Home Assistant $VERSION in /usr/src/homeassistant"
+
+    rm -rf /usr/src/homeassistant
+    git clone --branch $VERSION --single-branch --depth 1 https://github.com/home-assistant/core.git /usr/src/homeassistant
+    git config --global --add safe.directory /usr/src/homeassistant
+
+    pip install --upgrade -e /usr/src/homeassistant
+}
+
+function make_hass_config() {
+    # add extra config from project conf file
+    echo "Adding extra configuration..."
+}
+
+function fix_env() {
+
+    cat << EOF > /home/vscode/.bash_aliases
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+alias ll='ls -l'
+alias la='ls -la'
+alias l='ls -CF'
+alias ..='cd ..'
+alias p='python3'
+alias ha='sudo hass -c /config -v'
+alias halog='tail -f /config/homeassistant.log'
+EOF
+   
+    sudo chown vscode:vscode /home/vscode/.bash_aliases
+
+    cat << EOF >> /home/vscode/.bashrc
+
+echo "Devcontainer running:"
+echo "* $(python --version)"
+echo "* Home Assistant $(hass --version)" 
+EOF
+    git config --global alias.co checkout
+    git config --global alias.br branch
+    git config --global alias.ci commit
+    git config --global alias.st status
+}
+
 function setup() {
     install_ha_dev
+    make_hass_config
     ensure_hass_config
     create_hass_user
     bypass_onboarding
     install_hacs
     install_lovelace_plugins
-}
-
-function refresh_ha_repo () {
-
-    rm -rf /usr/src/homeassistant
-    git clone --branch dev --single-branch --depth 1 https://github.com/home-assistant/core.git /usr/src/homeassistant
-}
-
-function install_ha_dev() {
-
-    if [ ! -d "/usr/src/homeassistant/.git" ]; then
-        refresh_ha_repo
-    else
-        cd /usr/src/homeassistant
-
-        local UPSTREAM=${1:-'@{u}'}
-        local LOCAL=$(git rev-parse @)
-        local REMOTE=$(git rev-parse "$UPSTREAM")
-        
-        if [ $LOCAL = $REMOTE ]; then
-            echo "Home Assistant repo is already up to date Up-to-date"
-        else
-            refresh_ha_repo
-        fi
-    fi
-    pip install --upgrade -e /usr/src/homeassistant
+    fix_env
 }
 
 function run() {
@@ -147,15 +168,10 @@ case $1 in
     setup)
         setup
         ;;
-    launch)
-        run
-        ;;
-    run-dev)
-        setup
+    launch-hass)
         run
         ;;
     *)
-        setup
-        run
+        echo "Use with setup or launch-hass"
         ;;
 esac

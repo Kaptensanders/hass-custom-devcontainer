@@ -1,0 +1,54 @@
+# default config for 2023.8.4
+# see https://www.home-assistant.io/integrations/ for info
+
+#application_credentials:
+#assist_pipeline:
+automation:
+#bluetooth:
+#cloud:
+#conversation:
+counter:
+#dhcp:
+energy:
+frontend:
+#hardware:
+#history:
+homeassistant_alerts:
+input_boolean:
+input_button:
+input_datetime:
+input_number:
+input_select:
+input_text:
+#logbook:
+logger:
+#map:
+#media_source:
+#mobile_app:
+#my:
+#network:
+person:
+scene:
+schedule:
+script:
+#ssdp:
+#stream:
+sun:
+system_health:
+#tag:
+timer:
+#usb:
+webhook:
+#zeroconf:
+zone:
+
+homeassistant:
+  name: Home
+  latitude: 57.688219
+  longitude: 11.755695
+  elevation: 5
+  unit_system: metric
+  currency: SEK
+  country: SE
+  time_zone: "Europe/Stockholm"
+  legacy_templates: false
