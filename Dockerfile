@@ -37,4 +37,5 @@ COPY hassfest /usr/bin
 
 USER vscode
 
-CMD sudo -E container
+CMD sudo -E container setup-dev
+

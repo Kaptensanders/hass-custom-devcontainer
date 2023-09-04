@@ -126,6 +126,7 @@ case $1 in
     setup-dev)
         get_dev
         setup
+        run
         ;;
     setup)
         setup
