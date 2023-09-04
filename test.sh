@@ -1,11 +1,10 @@
 #!/bin/bash
 
-echo "Running test container..."
+set -x
 
-docker run --rm -it \
+docker run -it \
     -p 8123:8123 \
-    -v $(pwd):/workspaces/test \
+    -v $(pwd):/workspaces/devimage \
     -v $(pwd):/config/www/workspace \
-    -e LOVELACE_PLUGINS="" \
-    -e ENV_FILE="/workspaces/test/test.env" \
-    Kaptensanders/hass-custom-devcontainer
+    --name test_hass_container \
+    kaptensanders/hass-custom-devcontainer
