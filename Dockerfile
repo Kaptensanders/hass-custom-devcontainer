@@ -8,16 +8,6 @@ RUN \
     && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bluez \
-        libudev-dev \
-        libavformat-dev \
-        libavcodec-dev \
-        libavdevice-dev \
-        libavutil-dev \
-        libswscale-dev \
-        libswresample-dev \
-        libavfilter-dev \
-        libpcap-dev \
-        git \
         libffi-dev \
         libssl-dev \
         libjpeg-dev \
@@ -26,8 +16,12 @@ RUN \
         build-essential \
         libopenjp2-7 \
         libtiff5 \
-        libturbojpeg0 \
+        libturbojpeg0-dev \
         tzdata \
+        ffmpeg \
+        liblapack3 \
+        liblapack-dev \
+        libatlas-base-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --upgrade wheel pip
