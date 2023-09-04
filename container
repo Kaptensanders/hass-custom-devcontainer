@@ -101,6 +101,7 @@ function install_hacs() {
 }
 
 function setup() {
+    install_ha_dev
     ensure_hass_config
     create_hass_user
     bypass_onboarding
@@ -108,9 +109,29 @@ function setup() {
     install_lovelace_plugins
 }
 
-function get_dev() {
+function refresh_ha_repo () {
+
     rm -rf /usr/src/homeassistant
     git clone --branch dev --single-branch --depth 1 https://github.com/home-assistant/core.git /usr/src/homeassistant
+}
+
+function install_ha_dev() {
+
+    if [ ! -d "/usr/src/homeassistant/.git" ]; then
+        refresh_ha_repo
+    else
+        cd /usr/src/homeassistant
+
+        local UPSTREAM=${1:-'@{u}'}
+        local LOCAL=$(git rev-parse @)
+        local REMOTE=$(git rev-parse "$UPSTREAM")
+        
+        if [ $LOCAL = $REMOTE ]; then
+            echo "Home Assistant repo is already up to date Up-to-date"
+        else
+            refresh_ha_repo
+        fi
+    fi
     pip install --upgrade -e /usr/src/homeassistant
 }
 
@@ -123,11 +144,6 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 case $1 in
-    setup-dev)
-        get_dev
-        setup
-        run
-        ;;
     setup)
         setup
         ;;
@@ -135,7 +151,6 @@ case $1 in
         run
         ;;
     run-dev)
-        get_dev
         setup
         run
         ;;
