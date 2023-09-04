@@ -1,5 +1,5 @@
 #FROM homeassistant/home-assistant:dev
-FROM mcr.microsoft.com/vscode/devcontainers/python:0-3.10
+FROM mcr.microsoft.com/vscode/devcontainers/python:0-3.11
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -30,8 +30,6 @@ RUN \
         tzdata \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && source /usr/local/share/nvm/nvm.sh \
-    && nvm install 14 \
     && pip install --upgrade wheel pip
 
 EXPOSE 8123
