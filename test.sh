@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 docker run -it \
     -p 8123:8123 \
     -v $(pwd):/workspaces/devimage \
