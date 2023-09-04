@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Running test container..."
+echo "Running test container...."
 
 docker run --rm -it \
     -p 5002:8123 \
