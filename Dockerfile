@@ -2,11 +2,10 @@
 
 FROM mcr.microsoft.com/vscode/devcontainers/python:0-3.11
 
-# use: docker build --build-arg HA_VERSION=x.x.x to set another version
-# arg gets reset after each FROM 
-ARG HA_VERSION=2023.8.4
-
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# use: docker build --build-arg ENV_FILE=<file> to set another env file to use
+ARG ENV_FILE=container.env
 
 RUN \
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
@@ -40,7 +39,9 @@ RUN pip install -r /tmp/requirements.txt
 COPY --chmod=755 container /usr/bin
 COPY --chmod=755 hassfest /usr/bin
 COPY --chown=vscode:vscode configuration.yaml /config/configuration.yaml
-RUN HA_VERSION=${HA_VERSION} container setup
+
+COPY ${ENV_FILE} /tmp/container.env
+RUN ENV_FILE=/tmp/container.env container setup
 
 USER vscode
 

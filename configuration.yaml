@@ -1,18 +1,13 @@
-# default config for 2023.8.4
+# default_config for 2023.8.4
+# see see manifest file of default_config component to get an updated list
+
 # see https://www.home-assistant.io/integrations/ for info
 
-#application_credentials:
-#assist_pipeline:
+
 automation:
-#bluetooth:
-#cloud:
-#conversation:
 counter:
-#dhcp:
 energy:
 frontend:
-#hardware:
-#history:
 homeassistant_alerts:
 input_boolean:
 input_button:
@@ -20,27 +15,37 @@ input_datetime:
 input_number:
 input_select:
 input_text:
-#logbook:
 logger:
+person:
+scene:
+schedule:
+script:
+sun:
+system_health:
+timer:
+webhook:
+zone:
+
+#application_credentials:
+#assist_pipeline:
+#bluetooth:
+#cloud:
+#conversation:
+#dhcp:
+#hardware:
+#history:
+#logbook:
 #map:
 #media_source:
 #mobile_app:
 #my:
 #network:
-person:
-scene:
-schedule:
-script:
 #ssdp:
 #stream:
-sun:
-system_health:
 #tag:
-timer:
 #usb:
-webhook:
 #zeroconf:
-zone:
+
 
 homeassistant:
   name: Home
