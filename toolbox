@@ -17,9 +17,9 @@ function create_container() {
         -p $HASS_PORT:8123 \
         -v $(pwd):/workspaces/devimage \
         -v $(pwd):/config/www/workspace \
-        -e ENV_FILE="/workspaces/devimage/test.env" \
+        -e ENV_FILE="/workspaces/devimage/container.env" \
         --name "$CONTAINER_NAME" \
-        "$IMAGE_NAME"
+        "$IMAGE_NAME" $1
 }
 
 function test_remote() {
@@ -27,6 +27,7 @@ docker run --rm -it \
     -p $HASS_PORT:8123 \
     -v $(pwd):/workspaces/devimage \
     -v $(pwd):/config/www/workspace \
+    -e ENV_FILE="/workspaces/devimage/container.env" \
     --name ${CONTAINER_NAME}_remote\
     kaptensanders/hass-custom-devcontainer
 }
@@ -49,9 +50,13 @@ case $1 in
         docker start hass_dev_container >/dev/null 2>&1
         docker exec -it $CONTAINER_NAME /bin/bash
         ;;
-    test)
+    test_hass)
         build
         create_container
+        ;;
+    test_container)
+        build
+        create_container /bin/bash -l
         ;;
     test_remote)
         test_remote
@@ -69,8 +74,10 @@ case $1 in
         echo "      - build and run new $CONTAINER_NAME"
         echo "  * login:"
         echo "      - start $CONTAINER_NAME and attach login shell"
-        echo "  * login:"
-        echo "      - start $CONTAINER_NAME and attach login shell"
+        echo "  * test_hass:"
+        echo "      - same as build and create_container separatly"
+        echo "  * test_container:"
+        echo "      - local build and create_container but do not run hass, login to bash instead"
         echo "  * testremote:"
         echo "      - run container pulled from dockerhub"
         ;;

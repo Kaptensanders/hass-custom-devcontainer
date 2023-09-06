@@ -8,7 +8,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG ENV_FILE=container.env
 
 RUN \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarn.gpg >/dev/null \
+    && echo "deb [signed-by=/usr/share/keyrings/yarn.gpg] https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list \
     && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bluez \

@@ -96,7 +96,8 @@ EOF
 }
 
 function install_hacs() {
-    curl -sfSL https://hacs.xyz/install | bash -
+    cd /config
+    curl -sfSL https://get.hacs.xyz | bash -
 }
 
 function install_ha_dev() {
@@ -109,6 +110,8 @@ function install_ha_dev() {
     git config --global --add safe.directory /usr/src/homeassistant
 
     pip install --upgrade -e /usr/src/homeassistant
+    
+    echo "$(hass --version)" > /config/.HA_VERSION
 }
 
 function make_hass_config() {
