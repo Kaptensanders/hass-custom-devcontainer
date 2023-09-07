@@ -3,7 +3,6 @@
 
 # see https://www.home-assistant.io/integrations/ for info
 
-
 automation:
 counter:
 energy:
@@ -46,7 +45,6 @@ zone:
 #usb:
 #zeroconf:
 
-
 homeassistant:
   name: Home
   latitude: 57.688219
@@ -57,3 +55,8 @@ homeassistant:
   country: SE
   time_zone: "Europe/Stockholm"
   legacy_templates: false
+
+#
+# included client project yaml (mount from devcontainer.json)
+#
+

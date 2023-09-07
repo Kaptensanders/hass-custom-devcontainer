@@ -1,1 +1,6 @@
-
+# HA 2023.8.4 install issues fixes
+aiohttp_cors==0.7.0
+janus==1.0.0
+psutil_home_assistant
+hass-nabucasa==0.70.0
+psutil_home_assistant

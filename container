@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 plugins=
 
 function ensure_hass_config() {
@@ -110,13 +112,15 @@ function install_ha_dev() {
     git config --global --add safe.directory /usr/src/homeassistant
 
     pip install --upgrade -e /usr/src/homeassistant
-    
+        
     echo "$(hass --version)" > /config/.HA_VERSION
 }
 
-function make_hass_config() {
-    # add extra config from project conf file
-    echo "Adding extra configuration..."
+function setup_hass_config() {
+
+    mkdir -p /config/custom_components
+    mkdir -p /config/www
+
 }
 
 function fix_env() {
@@ -148,9 +152,10 @@ EOF
     git config --global alias.st status
 }
 
+# executed to 
 function setup() {
     install_ha_dev
-    make_hass_config
+    setup_hass_config
     ensure_hass_config
     create_hass_user
     bypass_onboarding
@@ -159,8 +164,43 @@ function setup() {
     fix_env
 }
 
+function install_custom_components(){
+    >&2 echo "ERROR: Custom components setup not implemented!"
+    if [ "$CUSTOM_COMPONENTS" != "" ]; then 
+        >&2 echo "Install the following manually ${CUSTOM_COMPONENTS}"
+    fi
+}
+
+# run from client project container to setup extra directives, typically /workspace/.devcontainer/setup.env is sourced
+function setup_project(){
+    install_custom_components
+    install_lovelace_plugins
+
+    # merge conf files
+    if test -f /config/append_ha_config.yaml; then
+        cat /config/append_ha_config.yaml >> /config/configuration.yaml
+    fi
+
+    init_hass
+}
+
 function run() {
     hass -c /config -v
+}
+
+function init_hass(){
+
+    echo "Initializing Home Assistant..."
+
+    coproc (hass -c /config -v 2>&1;)
+    while IFS= read -r line; do
+        echo "$line"
+        if [[ "$line" == *"Starting Home Assistant"* ]]; then
+            echo "Home Assistant initialization done"
+            sleep 5
+            kill -INT "$COPROC_PID"
+        fi
+    done <&"${COPROC[0]}"
 }
 
 if [[ -f "$ENV_FILE" ]]; then
@@ -171,8 +211,14 @@ case $1 in
     setup)
         setup
         ;;
+    init-hass)
+        init_hass
+        ;;
     launch-hass)
         run
+        ;;
+    setup-project)
+        setup_project
         ;;
     *)
         echo "Use with setup or launch-hass"

@@ -5,31 +5,25 @@ CONTAINER_NAME=hass_dev_container
 HASS_PORT=8123
 
 function build() {
-    docker container rm $CONTAINER_NAME
-    docker rmi $(docker images "$IMAGE_NAME" -a -q)
-    docker build $1 --progress=plain --tag "$IMAGE_NAME" .
+    docker build $1 --progress=plain --tag "$IMAGE_NAME" . 
+    docker image prune -f
 }
 
 function create_container() {
-
-    docker container rm $CONTAINER_NAME
+    docker container rm $CONTAINER_NAME 2>/dev/null
     docker run -it \
         -p $HASS_PORT:8123 \
-        -v $(pwd):/workspaces/devimage \
-        -v $(pwd):/config/www/workspace \
-        -e ENV_FILE="/workspaces/devimage/container.env" \
+        -v $(pwd):/workspaces/hass-custom-container \
         --name "$CONTAINER_NAME" \
         "$IMAGE_NAME" $1
 }
 
 function test_remote() {
-docker run --rm -it \
-    -p $HASS_PORT:8123 \
-    -v $(pwd):/workspaces/devimage \
-    -v $(pwd):/config/www/workspace \
-    -e ENV_FILE="/workspaces/devimage/container.env" \
-    --name ${CONTAINER_NAME}_remote\
-    kaptensanders/hass-custom-devcontainer
+    docker run --rm -it \
+        -p $HASS_PORT:8123 \
+        -v $(pwd):/workspaces/hass-custom-container \
+        --name ${CONTAINER_NAME}_remote\
+        kaptensanders/hass-custom-devcontainer
 }
 
 case $1 in
@@ -40,7 +34,7 @@ case $1 in
         build --no-cache
         ;;
     create_container)
-        create_container
+        create_container /bin/bash
         ;;
     recreate)
         build --no-cache
@@ -56,7 +50,7 @@ case $1 in
         ;;
     test_container)
         build
-        create_container /bin/bash -l
+        create_container /bin/bash
         ;;
     test_remote)
         test_remote
@@ -64,9 +58,8 @@ case $1 in
     *)
         echo "toolbox <build, rebuild, create_container, recreate, login, test, test_remote>"
         echo "  * build:"
-        echo "      - delete container $CONTAINER_NAME"
-        echo "      - delete image $CONTAINER_NAME"
-        echo "      - build new image (cached if available)"
+        echo "      - build new $IMAGE_NAME image (cached if available)"
+        echo "      - delete old dangling image"
         echo "  * rebuild:"
         echo "      - same as 'build' but without cached build"
         echo "  * create_container:"

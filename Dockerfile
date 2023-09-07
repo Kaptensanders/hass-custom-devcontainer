@@ -44,6 +44,11 @@ COPY --chown=vscode:vscode configuration.yaml /config/configuration.yaml
 COPY ${ENV_FILE} /tmp/container.env
 RUN ENV_FILE=/tmp/container.env container setup
 
+
+# does not work to startup hass during build process, problems keep piling on
+# works fine one the image is build and a container is attached
+# RUN ENV_FILE=/tmp/container.env container init-hass
+
 USER vscode
 
 CMD sudo -E container launch-hass
