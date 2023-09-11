@@ -6,6 +6,14 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # use: docker build --build-arg ENV_FILE=<file> to set another env file to use
 ARG ENV_FILE=container.env
+ARG HA_VERSION=2023.8.4
+ARG HA_DIR="/workspace/homeassistant"
+ARG HA_CONFIG_DIR="/workspace/ha_config"
+
+ENV HA_VERSION=${HA_VERSION}
+ENV HA_DIR=${HA_DIR}
+ENV HA_CONFIG_DIR=${HA_CONFIG_DIR}
+ENV DEVCONTAINER=1
 
 RUN \
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarn.gpg >/dev/null \
@@ -33,17 +41,17 @@ RUN \
 
 EXPOSE 8123
 
-VOLUME /config
+VOLUME /workspace
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 COPY --chmod=755 container /usr/bin
 COPY --chmod=755 hassfest /usr/bin
-COPY --chown=vscode:vscode configuration.yaml /config/configuration.yaml
+COPY --chown=vscode:vscode configuration.yaml ${HA_CONFIG_DIR}/configuration.yaml
+COPY --chown=vscode:vscode logger.yaml ${HA_CONFIG_DIR}/logger.yaml
 
 COPY ${ENV_FILE} /tmp/container.env
 RUN ENV_FILE=/tmp/container.env container setup
-
 
 # does not work to startup hass during build process, problems keep piling on
 # works fine one the image is build and a container is attached
