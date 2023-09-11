@@ -20,9 +20,10 @@ scene:
 timer:
 webhook:
 zone:
+# Devices and Services panel won't work without at least one device
+sun:
 
 #energy:
-#sun:
 #system_health:
 #application_credentials:
 #assist_pipeline:
