@@ -1,6 +1,10 @@
-# HA 2023.8.4 install issues fixes
-aiohttp_cors==0.7.0
-janus==1.0.0
-psutil_home_assistant
-hass-nabucasa==0.70.0
-psutil_home_assistant
+# Additional python modules to install
+# Do not install homeassistant from here
+# ...
+
+# hass startup fails sometimes due to missing dependencies, manually install before running hass
+webrtcvad==2.0.10
+
+# to run hassfest
+black==23.9.1
+tqdm==4.66.1

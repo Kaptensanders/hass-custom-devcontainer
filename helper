@@ -1,7 +1,7 @@
 #!/bin/bash
 
 IMAGE_NAME=hass_dev_image
-CONTAINER_NAME=hass_dev_container
+CONTAINER_NAME=hass_devcontainer
 HASS_PORT=8123
 
 function build() {
@@ -33,30 +33,40 @@ case $1 in
     rebuild)
         build --no-cache
         ;;
-    create_container)
+    create-container)
         create_container /bin/bash
         ;;
     recreate)
         build --no-cache
         create_container
         ;;
-    login)
-        docker start hass_dev_container >/dev/null 2>&1
-        docker exec -it $CONTAINER_NAME /bin/bash
-        ;;
-    test_hass)
-        build
-        create_container
-        ;;
-    test_container)
+    build-and-run)
         build
         create_container /bin/bash
         ;;
-    test_remote)
+    login)
+        docker start $CONTAINER_NAME >/dev/null 2>&1 && echo "Starting $CONTAINER_NAME" && STOP_CONTAINER=1
+        docker exec -it $CONTAINER_NAME /bin/bash
+        [ -n "$STOP_CONTAINER" ] && echo "Stopping $CONTAINER_NAME" && docker stop $CONTAINER_NAME
+        ;;
+    run-hass)
+        docker start $CONTAINER_NAME >/dev/null 2>&1 && echo "Starting $CONTAINER_NAME" && STOP_CONTAINER=1
+        docker exec -it $CONTAINER_NAME /bin/bash -ic ha
+        [ -n "$STOP_CONTAINER" ] && echo "Stopping $CONTAINER_NAME" && docker stop $CONTAINER_NAME
+        ;;
+    container-start)
+        docker start $CONTAINER_NAME
+        ;;
+    container-stop)
+        docker stop $CONTAINER_NAME
+        ;;
+    test-remote)
         test_remote
         ;;
     *)
-        echo "toolbox <build, rebuild, create_container, recreate, login, test, test_remote>"
+        echo "helper <build, rebuild, create-container, recreate, build-and-run, login, container-start, container-stop ,test-remote>"
+        echo "  * build-and-run:"
+        echo "      - same as build and create_container"
         echo "  * build:"
         echo "      - build new $IMAGE_NAME image (cached if available)"
         echo "      - delete old dangling image"

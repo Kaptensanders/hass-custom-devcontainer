@@ -1,7 +1,14 @@
 #!/bin/bash
 
-cd /usr/src/homeassistant
-for integration in `find /config/custom_components -mindepth 1 -maxdepth 1 -type d`
+cd $HA_DIR
+
+CC_DIR=$WORKSPACE_DIR/custom_components
+[ -d "$WORKSPACE_DIR/custom_components" ] || CC_DIR=$HA_CONFIG_DIR/custom_components
+
+echo "Validating components in $CC_DIR"
+
+for integration in `find $CC_DIR -mindepth 1 -maxdepth 1 -type d`
 do
+    echo "Validating $integration"
     python -m script.hassfest --action validate --integration-path $integration
 done

@@ -7,13 +7,13 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # use: docker build --build-arg ENV_FILE=<file> to set another env file to use
 ARG ENV_FILE=container.env
 ARG HA_VERSION=2023.8.4
-ARG HA_DIR="/workspace/homeassistant"
-ARG HA_CONFIG_DIR="/workspace/ha_config"
+ARG DEVIMAGE_DIR=/home/vscode/.devimage
+ARG HA_DIR=/usr/src/homeassistant
 
+ENV DEVIMAGE_DIR=${DEVIMAGE_DIR}
 ENV HA_VERSION=${HA_VERSION}
-ENV HA_DIR=${HA_DIR}
-ENV HA_CONFIG_DIR=${HA_CONFIG_DIR}
 ENV DEVCONTAINER=1
+ENV HA_DIR=${HA_DIR}
 
 RUN \
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarn.gpg >/dev/null \
@@ -41,22 +41,26 @@ RUN \
 
 EXPOSE 8123
 
-VOLUME /workspace
+RUN git clone --branch ${HA_VERSION} --single-branch --depth 1 https://github.com/home-assistant/core.git ${HA_DIR}
+
+# remove the .git folder or vscode will complain about unsafe repo. We dont need it
+RUN rm -rf ${HA_DIR}/.git
+
+RUN pip install -r ${HA_DIR}/requirements.txt
+RUN pip install -e ${HA_DIR}
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
+
 COPY --chmod=755 container /usr/bin
 COPY --chmod=755 hassfest /usr/bin
-COPY --chown=vscode:vscode configuration.yaml ${HA_CONFIG_DIR}/configuration.yaml
-COPY --chown=vscode:vscode logger.yaml ${HA_CONFIG_DIR}/logger.yaml
-
-COPY ${ENV_FILE} /tmp/container.env
-RUN ENV_FILE=/tmp/container.env container setup
-
-# does not work to startup hass during build process, problems keep piling on
-# works fine one the image is build and a container is attached
-# RUN ENV_FILE=/tmp/container.env container init-hass
 
 USER vscode
 
-CMD sudo -E container launch-hass
+RUN mkdir ${DEVIMAGE_DIR}
+COPY configuration.yaml ${DEVIMAGE_DIR}/ha_configuration_base.yaml
+
+RUN container setup-container
+
+CMD /bin/bash -l
+ 

@@ -18,4 +18,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: kaptensanders/hass-custom-devcontainer:latest
+        tags: kaptensanders/hass_dev_image:latest
