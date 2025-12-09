@@ -1,0 +1,53 @@
+#!/bin/bash
+
+read -p "Name of the custom component (same as <repo>/custom_componensts/<name>): " CC_NAME
+read -p "Title of the custom component (display version of name): " CC_TITLE
+
+#CC_NAME="my-component"
+#CC_TITLE="My Component"
+
+TARGET_DIR=~/temp/$CC_NAME
+
+## does not work if directory structure exists with complex structure likt .git etc
+#read -p "Target dir [enter: $TARGET_DIR]: " CUSTOM_DIR
+#TARGET_DIR=${CUSTOM_DIR:-$TARGET_DIR}
+
+read -p "Create file structure for $CC_TITLE in $TARGET_DIR (Y/n)? " confirm && [[ $confirm == [yY] || -z $confirm ]] || exit 1
+
+echo "Creating $TARGET_DIR"
+set -e
+
+mkdir -p $TARGET_DIR
+
+cd "$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/devcontainer_template"
+cp -Ra . $TARGET_DIR/
+cd $TARGET_DIR/
+
+process-dir() {
+    shopt -s dotglob
+    for filename in *; do
+
+        if [[ "$filename" == *"_CC_NAME_"* ]];then
+            oldName=$filename
+            filename=${filename/_CC_NAME_/$CC_NAME}
+            mv $oldName $filename 
+        fi
+
+        if [ -d "$filename" ]; then
+            (cd -- "$filename" && process-dir)
+        else
+            echo "Processing $filename"
+            sed -i "s/\#CC_NAME\#/$CC_NAME/" $filename
+            sed -i "s/\#CC_TITLE\#/$CC_TITLE/" $filename
+        fi
+    done
+}
+
+process-dir
+
+# manual
+echo "TODO:"
+echo "* Copy contents of $TARGET_DIR to project/repo folder"
+echo "* add '.homeassistant/' to repo .gitignore"
+echo "* customize devcontainer files"
+echo "* add additonal container setup to ./devcontainer/setup-project"

@@ -1,66 +1,51 @@
-#FROM homeassistant/home-assistant:dev
-
-FROM mcr.microsoft.com/vscode/devcontainers/python:0-3.11
+FROM mcr.microsoft.com/devcontainers/python:3.13-bookworm
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# use: docker build --build-arg ENV_FILE=<file> to set another env file to use
+# use: docker build --build-arg ENV_FILE=<file> to override or set another env file to use
 ARG ENV_FILE=container.env
-ARG HA_VERSION=2023.8.4
-ARG DEVIMAGE_DIR=/home/vscode/.devimage
-ARG HA_DIR=/usr/src/homeassistant
+ARG HA_VERSION=2025.1.0
+ARG HA_DIR=/home/vscode/ha_core
+ARG HA_CONFIG_DIR=/home/vscode/ha_config
 
-ENV DEVIMAGE_DIR=${DEVIMAGE_DIR}
 ENV HA_VERSION=${HA_VERSION}
 ENV DEVCONTAINER=1
 ENV HA_DIR=${HA_DIR}
-
-RUN \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarn.gpg >/dev/null \
-    && echo "deb [signed-by=/usr/share/keyrings/yarn.gpg] https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list \
-    && apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        bluez \
-        libffi-dev \
-        libssl-dev \
-        libjpeg-dev \
-        zlib1g-dev \
-        autoconf \
-        build-essential \
-        libopenjp2-7 \
-        libtiff5 \
-        libturbojpeg0-dev \
-        tzdata \
-        ffmpeg \
-        liblapack3 \
-        liblapack-dev \
-        libatlas-base-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install --upgrade wheel pip
+ENV HA_CONFIG_DIR=${HA_CONFIG_DIR}
+ENV PYTHONPATH=${HA_DIR}
 
 EXPOSE 8123
 
-RUN git clone --branch ${HA_VERSION} --single-branch --depth 1 https://github.com/home-assistant/core.git ${HA_DIR}
+RUN apt-get update
 
-# remove the .git folder or vscode will complain about unsafe repo. We dont need it
-RUN rm -rf ${HA_DIR}/.git
-
-RUN pip install -r ${HA_DIR}/requirements.txt
-RUN pip install -e ${HA_DIR}
-
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
-
-COPY --chmod=755 container /usr/bin
-COPY --chmod=755 hassfest /usr/bin
+# homeassistant dependencies
+# see https://www.home-assistant.io/installation/linux
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  --no-install-recommends \
+        autoconf pkg-config libssl-dev libxml2-dev \
+        libxslt1-dev libjpeg-dev libffi-dev libudev-dev \
+        zlib1g-dev libavformat-dev libavcodec-dev libavdevice-dev \
+        libavutil-dev libavfilter-dev libswscale-dev libswresample-dev \
+        ffmpeg libgammu-dev bluez build-essential libopenjp2-7 libtiff6 \
+        libturbojpeg0-dev tzdata liblapack3 liblapack-dev libatlas-base-dev \
+        libpcap-dev \
+        && apt-get clean \
+        && pip install --upgrade wheel pip
 
 USER vscode
 
-RUN mkdir ${DEVIMAGE_DIR}
-COPY configuration.yaml ${DEVIMAGE_DIR}/ha_configuration_base.yaml
+RUN git clone --branch ${HA_VERSION} --single-branch --depth 1 https://github.com/home-assistant/core.git ${HA_DIR}
+RUN ${HA_DIR}/script/setup
+RUN rm -rf ${HA_DIR}/.git
+
+# (copy will always set root permissions)
+COPY --chmod=755 container /usr/bin
+COPY --chmod=755 hassfest /usr/bin
+COPY --chmod=755 add_ha_resource /usr/bin
+
+RUN mkdir ${HA_CONFIG_DIR}
+COPY configuration.yaml ${HA_CONFIG_DIR}/configuration.yaml
+RUN sudo chown vscode:vscode ${HA_CONFIG_DIR}/configuration.yaml
 
 RUN container setup-container
 
 CMD /bin/bash -l
- 

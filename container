@@ -4,7 +4,6 @@
 #
 #   * Dockerfile should run: containter setup-container
 #   * devcontainer.json should run: containter setup-project (in postCreateCommand)
-#   * vscode tasks should
 #
 
 set -e
@@ -13,9 +12,13 @@ plugins=
 user_root=0
 user_vscode=1000
 
-[ -n "$DEVIMAGE_DIR" ] || die "DEVIMAGE_DIR not set (set in Dockerfile)"
-HA_DEFAULT_CONF_INSTALL=$DEVIMAGE_DIR/homeassistant_default_config
+[ -n "$HA_DIR" ] || die "HA_DIR not set (set in Dockerfile)"
+[ -n "$HA_CONFIG_DIR" ] || die "HA_CONFIG_DIR not set (set in Dockerfile)"
 
+
+if [ -z "$VIRTUAL_ENV" ]; then
+    source $HA_DIR//venv/bin/activate
+fi
 
 
 function info(){
@@ -186,22 +189,23 @@ alias la='ls -la'
 alias l='ls -CF'
 alias ..='cd ..'
 alias p='python3'
-alias ha='container hass-run'
-alias ha-debug='container hass-debug'
+alias ha='hass -v -c ${HA_CONFIG_DIR}'
+alias ha-debug='hass -v -c ${HA_CONFIG_DIR} --debug '
 alias halog='tail -n 200 -f ${HA_CONFIG_DIR}/home-assistant.log'
 EOF
 
-
-echo "export HA_CONFIG_DIR=\${HA_CONFIG_DIR:-\"$HA_DEFAULT_CONF_INSTALL\"}" >> /home/vscode/.bashrc
-echo "export WORKSPACE_DIR=\${WORKSPACE_DIR:-\"/home/vscode\"}" >> /home/vscode/.bashrc
+# set default values for HA_CONFIG_DIR and WORKSPACE_DIR if they are not set by a devcontainer.json (.env file). This way we can run the default vanilla HA in the docker image
+echo "export HA_CONFIG_DIR=\${HA_CONFIG_DIR:-\"/home/vscode/ha_config\"}" >> /home/vscode/.bashrc
+echo "export WORKSPACE_DIR=\${WORKSPACE_DIR:-\"/workspaces\"}" >> /home/vscode/.bashrc
 
     cat << 'EOF' >> /home/vscode/.bashrc
-export PYTHONPATH="${PYTHONPATH}:${WORKSPACE_DIR}/custom_components"
-cd $WORKSPACE_DIR
+export PYTHONPATH="${PYTHONPATH}:${WORKSPACE_DIR}"
+cd $HA_CONFIG_DIR
 echo "Devcontainer running:"
 echo "* $(python --version)"
 echo "* Home Assistant $(cat ${HA_CONFIG_DIR}/.HA_VERSION)" 
 echo "* Run 'ha' to start Home Assistant"
+source ${HA_DIR}/venv/bin/activate
 EOF
  
     git config --global alias.co checkout
@@ -215,73 +219,68 @@ function init_ha() {
     # HA seems to have issues on first run to install modules, maybe a race condition issue with pip. Works better second time
 
     info "Initializing Home Assistant in $HA_CONFIG_DIR"
-    local retries="${1:-1}"
-    local success=1
 
-    for (( i=0; i<$retries; i++ ))
-    do
-        if [ "$success" -ne "1" ]; then
-            info "\nRetrying HA init...\n"
+    coproc (hass -c ${HA_CONFIG_DIR} -v 2>&1;)
+    while IFS= read -r line; do
+        echo "$line"
+        if [[ "$line" == *"Starting Home Assistant"* ]]; then
+            info "\nHA init done, waiting for 10 seconds before shutdown\n"
+            sleep 10
+            kill -INT "$COPROC_PID"
+            wait "$COPROC_PID" || true    
         fi
 
-        success=1
-        coproc (hass -c ${HA_CONFIG_DIR} -v 2>&1;)
-        while IFS= read -r line; do
-            echo "$line"
-            if [[ "$line" == *"[homeassistant.setup] Setup failed for"*  ]]; then
-                success=0
-                echo "$COPROC_PID Fail"
-                
-                if [ -n "$COPROC_PID" ]; then # check for pid var first to avoid race condition
-                    echo "Kiling $COPROC_PID"
-                    kill -INT "$COPROC_PID"
-                    wait "$COPROC_PID" || true
-                fi
-            fi
+    done <&"${COPROC[0]}"
 
-            if [[ "$line" == *"Starting Home Assistant"* ]]; then
-                sleep 3
-                kill -INT "$COPROC_PID"
-            fi
-        done <&"${COPROC[0]}"
-
-        if [ "$success" -eq "1" ]; then
-            info "Home Assistant initialization done"
-            break
-        else
-            errEcho "Detected a problem in Homeassistant initialization, aborting..."
-        fi
-
-    done
-    
-    [ "$success" -eq "1" ] || die "Failed to initialize Home assistant"
 }
 
-function setup_ha() {
+function setup_vanilla_ha() {
 
-    # homeassistant is already installed by Dockerfile
+    info "Configuring Home Assistant vanilla install..."
+
+    # set default config so HA starts in vanilla mode, will be overridden by setup_hass_config_dir
     
-    # perform a default installation in HA_DEFAULT_CONF_INSTALL
-    # used to fast track project ha config setup
+    echo "default: info" > $HA_CONFIG_DIR/logger.yaml
+    cat << 'EOF' > $HA_CONFIG_DIR/homeassistant.yaml
+name: Home
+latitude: 57.688219
+longitude: 11.755695
+elevation: 5
+unit_system: metric
+currency: SEK
+country: SE
+time_zone: "Europe/Stockholm"
+legacy_templates: false
+EOF
 
-    info "Installing default HA configuration in $HA_DEFAULT_CONF_INSTALL"
+    # some extra dependencies
+    pip install zlib_ng isal
 
-    hass --script ensure_config -c $HA_DEFAULT_CONF_INSTALL
-    mkdir -p $HA_DEFAULT_CONF_INSTALL
-    HA_CONFIG_DIR=$HA_DEFAULT_CONF_INSTALL init_ha 3
-}
-
-function setup_hass_config_dir() {
-
-    info "Setting up hass config dir in $HA_CONFIG_DIR"
-    sudo rm -Rf $HA_CONFIG_DIR
+    echo "$(hass --version)" > $HA_CONFIG_DIR/.HA_VERSION
+    hass --script ensure_config -c $HA_CONFIG_DIR
 
     mkdir -p $HA_CONFIG_DIR/custom_components
     mkdir -p $HA_CONFIG_DIR/www
     mkdir -p $HA_CONFIG_DIR/.storage
 
-    # Dockerfile should copy ha_configuration.yaml to DEVIMAGE_DIR
-    cp ${DEVIMAGE_DIR}/ha_configuration_base.yaml $HA_CONFIG_DIR/configuration.yaml
+    create_hass_user
+    bypass_onboarding
+
+    cd "$WORKSPACE_DIR"
+    hass -v -c "$HA_CONFIG_DIR" 2>&1 | while IFS= read -r line; do
+        echo "$line"
+        if [[ "$line" == *"Starting Home Assistant"* ]]; then
+            info "HA initialization done, stopping HA in 10 seconds..."
+            sleep 10
+            pkill -P $$ hass
+            break
+        fi
+    done
+}
+
+function setup_hass_config_dir() {
+
+    info "Setting up hass config dir in $HA_CONFIG_DIR"
 
     # import contents of .devcontainer/ha_config/ to config dir
     # *.append files are appended to existing files, other files are soft linked
@@ -296,17 +295,11 @@ function setup_hass_config_dir() {
         else
             # link file
             echo "Creating link $target"
-            ln -s $PWD/$file $target
+            ln -sf $PWD/$file $target
         fi
         
     done
 
-    # move the deps folder of the default installation to this config to make it easier to setup hass first time
-    info "Bootstrapping $HA_CONFIG_DIR with dependencies from default config installation" 
-    mv $HA_DEFAULT_CONF_INSTALL/deps $HA_CONFIG_DIR
-
-    hass --script ensure_config -c $HA_CONFIG_DIR
-    echo "$(hass --version)" > $HA_CONFIG_DIR/.HA_VERSION
 }
 
 # run from Dockerfile
@@ -316,7 +309,7 @@ function setup_container() {
 
     [ -n "$HA_VERSION" ] || die "HA_VERSION not set"
 
-    setup_ha
+    setup_vanilla_ha
     setup_environment
 }
 
@@ -328,12 +321,9 @@ function setup_project() {
 
     [ -n "$HA_VERSION" ]    || die "HA_VERSION not set"
     [ -n "$WORKSPACE_DIR" ] || die "WORKSPACE_DIR not set, should be the repository folder"
-    [ -n "$HA_CONFIG_DIR" ] || die "HA_CONFIG_DIR not set, should typically be WORKSPACE_DIR/ha_config"
+    [ -n "$HA_CONFIG_DIR" ] || die "HA_CONFIG_DIR not set, should typically be /home/vscode/ha_config"
 
     setup_hass_config_dir
-    create_hass_user
-    bypass_onboarding
-
     install_custom_components
     install_lovelace_plugins
 
@@ -342,22 +332,14 @@ function setup_project() {
     info "To open a devcontainer and load a .code-workspace directly from command line, see this script:"
     info "https://gist.github.com/Kaptensanders/79da7c1547751fb43c75904e3110bbf9\n"
 
-}
+    # run project specific setup file if exists
 
-function hass_run() {
-    
-    requireUser $user_vscode
-    # must start from the WORKSPACE_DIR or the PYTHON_PATH wont have any effect (for some reason)
-    cd $WORKSPACE_DIR
-    hass -v -c $HA_CONFIG_DIR
-}
+    if test -f "$WORKSPACE_DIR/.devcontainer/setup-project"; then
+        $WORKSPACE_DIR/.devcontainer/setup-project
+    else
+        echo "project specific setup file not found, skipping..."
+    fi
 
-function hass_debug() {
-
-    requireUser $user_vscode
-    # must start from the WORKSPACE_DIR or the PYTHON_PATH wont have any effect (for some reason)
-    cd $WORKSPACE_DIR
-    hass -v -c $HA_CONFIG_DIR --debug
 }
 
 case $1 in
@@ -366,12 +348,6 @@ case $1 in
         ;;
     setup-project)
         setup_project
-        ;;
-    hass-run)
-        hass_run
-        ;;
-    hass-debug)
-        hass_debug
         ;;
     *)
         info "Usage: setup_container or setup_project"

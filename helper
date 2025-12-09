@@ -1,11 +1,13 @@
 #!/bin/bash
 
-IMAGE_NAME=hass_dev_image
-CONTAINER_NAME=hass_devcontainer
+#HA_VERSION=2025.1.0
+HA_VERSION=2025.7.0
+IMAGE_NAME=hass_dev_image_${HA_VERSION}
+CONTAINER_NAME=hass_devcontainer_${HA_VERSION}
 HASS_PORT=8123
 
 function build() {
-    docker build $1 --progress=plain --tag "$IMAGE_NAME" . 
+    docker build $1 --build-arg HA_VERSION=${HA_VERSION} --progress=plain --tag "$IMAGE_NAME" . 
     docker image prune -f
 }
 

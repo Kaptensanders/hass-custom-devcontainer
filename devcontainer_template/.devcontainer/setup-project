@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo "--- begin project specific setup for #CC_TITLE# --"
+
+# TODO
+# Add project specific setup directives to this file
+# It will be called by "container setup-project" (see devcontainer.json postCreateCommand)
+
+# useful environment vars:
+#
+# WORKSPACE_DIR - usually /workspaces/<project>, eg repo mounted into devcontainer
+# HA_CONFIG_DIR - usually /home/vscode/ha_config, HA config dir
+# HA_DIR -  - usually /home/vscode/ha_core, HA install dir
+#
+

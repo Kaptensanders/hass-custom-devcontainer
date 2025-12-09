@@ -1,63 +1,32 @@
-# Lightweight bootstrap configuration for HA 2023.8.4 based on default_config
+# Lightweight bootstrap configuration for HA 2025.1.0 based on default_config
 #
 # Project specific .devcontainer/ha_config/configuration.yaml.append file will be appended
 # during the devcontainer build processs
 #
 
-automation:
-counter:
-frontend:
-homeassistant_alerts:
-input_boolean:
-input_button:
-input_datetime:
-input_number:
-input_select:
-input_text:
-person:
-schedule:
-script:
-scene:
-timer:
-webhook:
-zone:
-# Devices and Services panel won't work without at least one device
-sun:
-
-#energy:
-#system_health:
-#application_credentials:
 #assist_pipeline:
 #bluetooth:
 #cloud:
 #conversation:
 #dhcp:
-#hardware:
+#energy:
+#go2rtc:
 #history:
+#homeassistant_alerts:
 #logbook:
-#map:
 #media_source:
 #mobile_app:
 #my:
-#network:
 #ssdp:
 #stream:
-#tag:
+sun:
 #usb:
+webhook:
 #zeroconf:
 
-logger: !include logger.yaml
 
-homeassistant:
-  name: Home
-  latitude: 57.688219
-  longitude: 11.755695
-  elevation: 5
-  unit_system: metric
-  currency: SEK
-  country: SE
-  time_zone: "Europe/Stockholm"
-  legacy_templates: false
+logger: !include logger.yaml
+homeassistant: !include homeassistant.yaml
 
 #
 # included client project yaml (mount from devcontainer.json)
