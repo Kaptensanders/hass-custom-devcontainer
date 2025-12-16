@@ -17,7 +17,7 @@ user_vscode=1000
 
 
 if [ -z "$VIRTUAL_ENV" ]; then
-    source $HA_DIR//venv/bin/activate
+    source $HA_DIR/.venv/bin/activate
 fi
 
 
@@ -203,9 +203,10 @@ export PYTHONPATH="${PYTHONPATH}:${WORKSPACE_DIR}"
 cd $HA_CONFIG_DIR
 echo "Devcontainer running:"
 echo "* $(python --version)"
+echo "* HA config dir: ${HA_CONFIG_DIR}"
 echo "* Home Assistant $(cat ${HA_CONFIG_DIR}/.HA_VERSION)" 
-echo "* Run 'ha' to start Home Assistant"
-source ${HA_DIR}/venv/bin/activate
+echo "* Run 'ha' to start Home Assistant as http://localhost:8123"
+source ${HA_DIR}/.venv/bin/activate
 EOF
  
     git config --global alias.co checkout

@@ -1,7 +1,8 @@
 #!/bin/bash
 
 #HA_VERSION=2025.1.0
-HA_VERSION=2025.7.0
+#HA_VERSION=2025.7.0
+HA_VERSION=2025.12.2
 IMAGE_NAME=hass_dev_image_${HA_VERSION}
 CONTAINER_NAME=hass_devcontainer_${HA_VERSION}
 HASS_PORT=8123
@@ -68,7 +69,7 @@ case $1 in
     *)
         echo "helper <build, rebuild, create-container, recreate, build-and-run, login, container-start, container-stop ,test-remote>"
         echo "  * build-and-run:"
-        echo "      - same as build and create_container"
+        echo "      - same as build and create-container"
         echo "  * build:"
         echo "      - build new $IMAGE_NAME image (cached if available)"
         echo "      - delete old dangling image"

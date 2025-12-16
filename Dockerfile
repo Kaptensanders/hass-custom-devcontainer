@@ -4,7 +4,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # use: docker build --build-arg ENV_FILE=<file> to override or set another env file to use
 ARG ENV_FILE=container.env
-ARG HA_VERSION=2025.1.0
+ARG HA_VERSION=2025.12.2
 ARG HA_DIR=/home/vscode/ha_core
 ARG HA_CONFIG_DIR=/home/vscode/ha_config
 
