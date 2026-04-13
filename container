@@ -15,12 +15,6 @@ user_vscode=1000
 [ -n "$HA_DIR" ] || die "HA_DIR not set (set in Dockerfile)"
 [ -n "$HA_CONFIG_DIR" ] || die "HA_CONFIG_DIR not set (set in Dockerfile)"
 
-
-if [ -z "$VIRTUAL_ENV" ]; then
-    source $HA_DIR/.venv/bin/activate
-fi
-
-
 function info(){
     local YELLOW='\033[1;33m'
     local NC='\033[0m' # No Color
@@ -48,7 +42,7 @@ function create_hass_user() {
     local username=${HASS_USERNAME:-dev}
     local password=${HASS_PASSWORD:-dev}
     info "Creating Home Assistant User ${username}:${password}"
-    hass --script auth -c ${HA_CONFIG_DIR} add ${username} ${password}
+    venv_run hass --script auth -c ${HA_CONFIG_DIR} add ${username} ${password}
 }
 
 function bypass_onboarding() {
@@ -66,6 +60,14 @@ function bypass_onboarding() {
     "version": 3
 }
 EOF
+}
+
+
+venv_run() {
+  (
+    cd "${HA_DIR:?HA_DIR not set}" || exit 1
+    ./script/run-in-env.sh "$@"
+  )
 }
 
 function install_custom_components() {
@@ -128,9 +130,9 @@ function install_lovelace_plugins() {
 
     # from @thomasloven
 
-    for file in $LOVELACE_LOCAL_FILES
+    for file in $HA_LOCAL_LOVELACE_PLUGINS
     do
-        plugins="${plugins} /local/workspace/${file}"
+        plugins="${plugins} /local/${file}"
     done
 
     fetch_lovelace_plugins
@@ -180,6 +182,8 @@ EOF
 
 function setup_environment() {
 
+    info "Setting up user environment..."
+
     cat << 'EOF' > /home/vscode/.bash_aliases
 alias grep='grep --color=auto'
 alias fgrep='fgrep --color=auto'
@@ -199,6 +203,7 @@ echo "export HA_CONFIG_DIR=\${HA_CONFIG_DIR:-\"/home/vscode/ha_config\"}" >> /ho
 echo "export WORKSPACE_DIR=\${WORKSPACE_DIR:-\"/workspaces\"}" >> /home/vscode/.bashrc
 
     cat << 'EOF' >> /home/vscode/.bashrc
+source ~/ha_core/.venv/bin/activate
 export PYTHONPATH="${PYTHONPATH}:${WORKSPACE_DIR}"
 cd $HA_CONFIG_DIR
 echo "Devcontainer running:"
@@ -206,32 +211,13 @@ echo "* $(python --version)"
 echo "* HA config dir: ${HA_CONFIG_DIR}"
 echo "* Home Assistant $(cat ${HA_CONFIG_DIR}/.HA_VERSION)" 
 echo "* Run 'ha' to start Home Assistant as http://localhost:8123"
-source ${HA_DIR}/.venv/bin/activate
+cd $WORKSPACE_DIR
 EOF
  
     git config --global alias.co checkout
     git config --global alias.br branch
     git config --global alias.ci commit
     git config --global alias.st status
-}
-
-function init_ha() {
-
-    # HA seems to have issues on first run to install modules, maybe a race condition issue with pip. Works better second time
-
-    info "Initializing Home Assistant in $HA_CONFIG_DIR"
-
-    coproc (hass -c ${HA_CONFIG_DIR} -v 2>&1;)
-    while IFS= read -r line; do
-        echo "$line"
-        if [[ "$line" == *"Starting Home Assistant"* ]]; then
-            info "\nHA init done, waiting for 10 seconds before shutdown\n"
-            sleep 10
-            kill -INT "$COPROC_PID"
-            wait "$COPROC_PID" || true    
-        fi
-
-    done <&"${COPROC[0]}"
 
 }
 
@@ -255,10 +241,10 @@ legacy_templates: false
 EOF
 
     # some extra dependencies
-    pip install zlib_ng isal
+    venv_run pip install zlib_ng isal
 
-    echo "$(hass --version)" > $HA_CONFIG_DIR/.HA_VERSION
-    hass --script ensure_config -c $HA_CONFIG_DIR
+    echo "$(venv_run hass --version)" > $HA_CONFIG_DIR/.HA_VERSION
+    venv_run hass --script ensure_config -c $HA_CONFIG_DIR
 
     mkdir -p $HA_CONFIG_DIR/custom_components
     mkdir -p $HA_CONFIG_DIR/www
@@ -267,16 +253,22 @@ EOF
     create_hass_user
     bypass_onboarding
 
-    cd "$WORKSPACE_DIR"
-    hass -v -c "$HA_CONFIG_DIR" 2>&1 | while IFS= read -r line; do
+    coproc HA { venv_run hass -v -c "$HA_CONFIG_DIR" 2>&1; }
+    ha_pid=$HA_PID
+
+    while IFS= read -r line <&"${HA[0]}"; do
         echo "$line"
         if [[ "$line" == *"Starting Home Assistant"* ]]; then
             info "HA initialization done, stopping HA in 10 seconds..."
             sleep 10
-            pkill -P $$ hass
+            kill "$ha_pid" 2>/dev/null || true
             break
         fi
     done
+
+    set +e
+    wait "$ha_pid"
+    set -e
 }
 
 function setup_hass_config_dir() {
@@ -300,7 +292,6 @@ function setup_hass_config_dir() {
         fi
         
     done
-
 }
 
 # run from Dockerfile

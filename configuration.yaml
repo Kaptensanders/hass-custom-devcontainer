@@ -1,29 +1,15 @@
-# Lightweight bootstrap configuration for HA 2025.1.0 based on default_config
+# Lightweight bootstrap configuration for HA
 #
 # Project specific .devcontainer/ha_config/configuration.yaml.append file will be appended
 # during the devcontainer build processs
 #
 
-#assist_pipeline:
-#bluetooth:
-#cloud:
-#conversation:
-#dhcp:
-#energy:
-#go2rtc:
-#history:
-#homeassistant_alerts:
-#logbook:
-#media_source:
-#mobile_app:
-#my:
-#ssdp:
-#stream:
+http:
+websocket_api:
+frontend:
+config:
 sun:
-#usb:
 webhook:
-#zeroconf:
-
 
 logger: !include logger.yaml
 homeassistant: !include homeassistant.yaml
